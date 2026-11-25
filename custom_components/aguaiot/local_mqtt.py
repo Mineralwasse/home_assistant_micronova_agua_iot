@@ -512,7 +512,7 @@ class LocalMqttAguaIOT:
         target_mac = self._device_mac
         if not target_mac:
             return
-        values: list[int] = []
+        values: dict[str, int] = {}
         chunk_timeout = min(self.buffer_read_timeout, 5)
         try:
             for start in range(
@@ -538,7 +538,8 @@ class LocalMqttAguaIOT:
                     self._response_event.wait(),
                     timeout=chunk_timeout,
                 )
-                values.extend(self._register_values[offset] for offset in items)
+                for offset in items:
+                    values[str(offset)] = self._register_values[offset]
         except (TimeoutError, KeyError, OSError, RuntimeError, AguaIOTError) as err:
             _LOGGER.warning(
                 "Could not capture initial EEPROM backup for '%s': %s",
@@ -549,7 +550,6 @@ class LocalMqttAguaIOT:
 
         device.device_info_data["eeprom_backup"] = {
             "captured_at": datetime.now(UTC).isoformat(),
-            "start": EEPROM_BACKUP_START,
             "values": values,
         }
         self._cache_dirty = True
